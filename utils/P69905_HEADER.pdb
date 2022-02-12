@@ -1,0 +1,15 @@
+HEADER    AlphaFold2 model of P69905
+TITLE     AlphaFold2 model of P69905
+SOURCE                                                                
+AUTHOR     Doe Jane, Doe Rick   
+REMARK 220 EXPERIMENTAL DETAILS                                       
+REMARK 220 EXPERIMENT TYPE: THEORETICAL MODEL                         
+REMARK 220 METHOD: ALPHAFOLD2                                  
+REMARK 220 PROGRAM: ALPHAFOLD2                                          
+REMARK 220 SEQDB: UniProt   P69905       HBA_HUMAN
+REMARK 220 GENE: HBA1
+REMARK 220 TARGET LENGTH:               141
+REMARK 220 TARGET BEGIN:                2
+REMARK 220 TARGET END:                  142
+REMARK 220 ALPHAFOLD MODEL ID:          P69905
+EXPDTA    THEORETICAL MODEL
