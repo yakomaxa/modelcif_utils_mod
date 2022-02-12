@@ -5,6 +5,7 @@
 # Date:    Nov 29, 2021
 # Version: 0.001
 # Adapted from Ben Webb's modbase_pdb_to_cif.py available at https://github.com/salilab/modbase_utils
+# Note: Only works for single chain models
 # Input: PDB file with HEADER, TITLE, and REMARKS, and AlphaFold Pickle File
 # Output: mmCIF file
 # Command line arguments: Input AF pickle filename, Input PDB filename, Output mmCIF filename
