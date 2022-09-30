@@ -31,6 +31,7 @@ three_to_one = {
 one_to_three = {val: key for key, val in three_to_one.items()}
 
 
+
 class AFPickle:
     """Data from an AlphaFold Pickle File"""
 
@@ -86,10 +87,10 @@ class CifWriter:
 
     def write_header(self, model_id, title):
         self.print("data_ %s" % model_id)
-        self.print("_entry.id %s" % model_id)
-        self.print("_struct.entry_id %s" % model_id)
-        if title:
-            self.print("_struct.title '%s'" % title)
+#        self.print("_entry.id %s" % model_id)
+#        self.print("_struct.entry_id %s" % model_id)
+#        if title:
+#            self.print("_struct.title '%s'" % title)
 
     def write_exptl(self, model_id, expdta):
         if expdta.startswith('THEORETICAL MODEL'):
@@ -201,39 +202,49 @@ TRP 'L-peptide linking' TRYPTOPHAN 'C11 H12 N2 O2' 204.229
 TYR 'L-peptide linking' TYROSINE 'C9 H11 N O3' 181.191
 VAL 'L-peptide linking' VALINE 'C5 H11 N O2' 117.148""")
 
-    def write_entity_details(self, sequence3, gene):
+    def write_entity_details(self, sequence3_chain, chain_name_list, chain_ids, genes):
         # entities for target
         with self.loop(
                 "entity",
                 ["id", "type", "src_method", "pdbx_description"]) as lp:
-            lp.write("%d polymer man %s" % (self.target.entity_id, gene))
-
-        target_primary = "".join(three_to_one[x] for x in sequence3)
+            for i in range(len(genes)):
+                lp.write("%d polymer man %s" % (i+1, genes[i]))
 
         with self.loop(
                 "entity_poly",
                 ["entity_id", "type", "nstd_linkage",
                  "pdbx_seq_one_letter_code",
                  "pdbx_seq_one_letter_code_can"]) as lp:
-            lp.write("%d polypeptide(L) no %s %s"
-                     % (self.target.entity_id, target_primary, target_primary))
+            i=0
+            for chain_id in chain_ids:
+                print(sequence3_chain[i])
+                target_primary = "".join(three_to_one[x] for x in sequence3_chain[i])
+                lp.write("%d polypeptide(L) no %s %s"
+                         % (self.target.entity_id, target_primary, target_primary))
+                i=i+1
 
         with self.loop(
                 "entity_poly_seq",
                 ["entity_id", "num", "mon_id", "hetero"]) as lp:
-            for i, s in enumerate(sequence3):
-                lp.write("%d %d %s ." % (self.target.entity_id, i+1, s))
+            for j in range(len(chain_ids)):
+                for i, s in enumerate(sequence3_chain[j]):
+                    lp.write("%d %d %s ." % (j+1, i+1, s))
 
     def write_target_details(self, chain_ids, sequence3, seqdb, target_begin, target_end):
         with self.loop(
                 "ma_target_entity", ["entity_id", "data_id", "origin"]) as lp:
-            lp.write("%d %d ." % (self.target.entity_id, self.target.data_id))
+            di = 1
+            for chain_id in chain_ids:
+                lp.write("%d %d ." % (di, di))
+                di+=1
 
         with self.loop(
                 "ma_target_entity_instance",
                 ["asym_id", "entity_id", "details"]) as lp:
+            ei=1
             for chain_id in chain_ids:
-                lp.write("%s %d ." % (chain_id, self.target.entity_id))
+                lp.write("%s %d ." % (chain_id, ei))
+                ei+=1
 
         with self.loop(
                 "ma_target_ref_db_details",
@@ -250,15 +261,17 @@ VAL 'L-peptide linking' VALINE 'C5 H11 N O2' 117.148""")
                              % (self.target.entity_id, db.name, db.code,
                                 db.accession, target_begin, target_end))
 
-    def write_assembly(self, chain_ids, sequence3):
+    def write_assembly(self, chain_ids, sequence3_chain):
         with self.loop(
                 'ma_struct_assembly',
                 ['ordinal_id', 'assembly_id', 'entity_id', 'asym_id',
                  'seq_id_begin', 'seq_id_end']) as lp:
-            # Simple assembly of a single chain
-            for chain_id in chain_ids:
+            ei = 0
+            for chain_id in chain_ids:                        
+                l = len(sequence3_chain[ei])
+                ei += 1
                 lp.write("1 1 %d %s 1 %d"
-                         % (self.target.entity_id, chain_id, len(sequence3)))
+                         % (ei, chain_id, l))
 
     def write_data(self):
         with self.loop("ma_data", ["id", "name", "content_type"]) as lp:
@@ -291,9 +304,12 @@ VAL 'L-peptide linking' VALINE 'C5 H11 N O2' 117.148""")
                  'model_type']) as lp:
             lp.write("1 1 1 'Top scoring model' . 1 %d 'Other'" % self.coord.data_id)
 
-    def write_asym(self, chain_id):
+    def write_asym(self, chain_ids):
         with self.loop('struct_asym', ['id', 'entity_id', 'details']) as lp:
-            lp.write("%s %d ?" % (chain_id, self.target.entity_id))
+            ei = 1
+            for chain_id in chain_ids:
+                lp.write("%s %d ?" % (chain_id, ei))
+                ei += 1
 
     def write_seq_scheme(self, chain_ids, sequence3, tgtbeg, tgtend):
         assert len(sequence3) == tgtend - tgtbeg + 1
@@ -463,8 +479,8 @@ class Structure:
                 self.atoms.append(line)
         # Assume that all models are single chain
         if self.atoms:
-            self.chain_ids = list(set(self.atoms[:][21]))
-#            print(self.chain_ids)
+            self.chain_ids = list(set(self.atoms[:][21].strip()))
+            print(self.chain_ids)
 
     def get_sequence3(self):
         """Get PDB sequence as a sequence of 3-letter residue names"""
@@ -475,7 +491,18 @@ class Structure:
                 yield a[17:20].strip()  # residue name
                 resnum = this_resnum
 
+    def get_sequence3_chain(self,chain_id):
+        """Get PDB sequence as a sequence of 3-letter residue names"""
+        resnum = None
+        for a in self.atoms:
+            this_resnum = a[22:26]  # residue sequence number
+            if this_resnum != resnum:
+                if a[21] == chain_id:
+                    yield a[17:20].strip()  # residue name
+                    resnum = this_resnum
+
     def get_chains(self):
+        """Get PDB sequence as a sequence of 3-letter residue names"""
         resnum = None
         for a in self.atoms:
             this_resnum = a[22:26]  # residue sequence number
@@ -486,25 +513,29 @@ class Structure:
     def write_mmcif(self, fh, pkl):
         """Write current structure out to a mmCIF file handle"""
         # mmCIF models must always have a chain ID
-        chain_ids = self.chain_ids or 'A'
+        #chain_ids = self.chain_ids or 'A'
         sequence3 = list(self.get_sequence3())
         chain_name_list= list(self.get_chains())
+        chain_ids = sorted(list(set(chain_name_list)))
+        sequence3_chain=list()
+        for chain_id in chain_ids:
+            sequence3_chain.append(list(self.get_sequence3_chain(chain_id)))
         print(chain_name_list)
         pkl = AFPickle(pkl)
 
         c = CifWriter(fh, pkl)
-        c.write_header(" hoge", self.title)
+        c.write_header("", self.title)
 #        c.write_exptl("hoge", self.expdta)
         c.write_audit_conform()
         c.write_audit_author()
         c.write_citation()
         c.write_software()
         c.write_chem_comp()
-#        c.write_entity_details(sequence3, self.remarks['GENE'])
+        c.write_entity_details(sequence3_chain, chain_name_list,chain_ids, ["hoge","piyo"])
         tgtbeg = 1
         tgtend = len(sequence3)
         c.write_target_details(chain_ids, sequence3, self.seqdb, tgtbeg, tgtend)
-        c.write_assembly(chain_ids, sequence3)
+        c.write_assembly(chain_ids, sequence3_chain)
         c.write_data()
         c.write_protocol()
         c.write_model_list()
