@@ -327,11 +327,13 @@ VAL 'L-peptide linking' VALINE 'C5 H11 N O2' 117.148""")
     def write_atom_site(self, chain_id, atoms, resnum_begin, resnum_end):
         elements = set()
         auth_seqid = resnum_begin
-        entity_id = self.target.entity_id
+        entity_id = 0
         seqid = 1
         ordinal = 1
         model_num = 1
         pdb_resnum = None
+        this_chain = None
+        chain=None
         with self.loop(
             'atom_site',
             ['group_PDB', 'type_symbol', 'label_atom_id',
@@ -343,8 +345,16 @@ VAL 'L-peptide linking' VALINE 'C5 H11 N O2' 117.148""")
                 # Detect new residue if PDB resnum changed
                 pdb_this_resnum = a[22:26]
                 if pdb_resnum is not None and pdb_this_resnum != pdb_resnum:
-                    auth_seqid += 1
+                    auth_seqid += 1    
                     seqid += 1
+
+                this_chain = a[21]
+                if this_chain is not None and this_chain!=chain:
+#                    auth_seqid = 1
+                    seqid = 1
+                    entity_id += 1
+                        
+                chain = this_chain
                 pdb_resnum = pdb_this_resnum
                 inscode = a[26:27].strip() or '?'
                 group_pdb = a[:6]
@@ -363,7 +373,7 @@ VAL 'L-peptide linking' VALINE 'C5 H11 N O2' 117.148""")
                             seqid, auth_seqid, inscode, cid, x, y, z,
                             occ, tfac, entity_id, model_num, ordinal))
                 ordinal += 1
-        assert auth_seqid == resnum_end
+        #assert auth_seqid == resnum_end
 
         with CifLoop(fh, 'atom_type', ['symbol']) as lp:
             for element in sorted(elements):
