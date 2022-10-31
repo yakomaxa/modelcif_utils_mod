@@ -535,7 +535,6 @@ class Structure:
 
         c = CifWriter(fh, pkl)
         c.write_header("", self.title)
-#        c.write_exptl("hoge", self.expdta)
         c.write_audit_conform()
         c.write_audit_author()
         c.write_citation()
