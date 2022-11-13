@@ -87,6 +87,7 @@ class CifWriter:
 
     def write_header(self, model_id, title):
         self.print("data_ %s" % model_id)
+#        comment-out because these need additional REMARK files
 #        self.print("_entry.id %s" % model_id)
 #        self.print("_struct.entry_id %s" % model_id)
 #        if title:
@@ -217,10 +218,9 @@ VAL 'L-peptide linking' VALINE 'C5 H11 N O2' 117.148""")
                  "pdbx_seq_one_letter_code_can"]) as lp:
             i=0
             for chain_id in chain_ids:
-                print(sequence3_chain[i])
                 target_primary = "".join(three_to_one[x] for x in sequence3_chain[i])
                 lp.write("%d polypeptide(L) no %s %s"
-                         % (self.target.entity_id, target_primary, target_primary))
+                         % (i+1, target_primary, target_primary))
                 i=i+1
 
         with self.loop(
@@ -350,7 +350,6 @@ VAL 'L-peptide linking' VALINE 'C5 H11 N O2' 117.148""")
 
                 this_chain = a[21]
                 if this_chain is not None and this_chain!=chain:
-#                    auth_seqid = 1
                     seqid = 1
                     entity_id += 1
                         
@@ -373,7 +372,6 @@ VAL 'L-peptide linking' VALINE 'C5 H11 N O2' 117.148""")
                             seqid, auth_seqid, inscode, cid, x, y, z,
                             occ, tfac, entity_id, model_num, ordinal))
                 ordinal += 1
-        #assert auth_seqid == resnum_end
 
         with CifLoop(fh, 'atom_type', ['symbol']) as lp:
             for element in sorted(elements):
@@ -382,11 +380,7 @@ VAL 'L-peptide linking' VALINE 'C5 H11 N O2' 117.148""")
     def write_af_scores(self, chain_name_list, sequence3):
         if not self.pkl:
             return
-            
 
-        print(self.pkl.plddt)
-        print(len(self.pkl.plddt))
-        print(len(sequence3))
         assert len(sequence3) == len(self.pkl.plddt), "Length of sequence in the PDB and pLDDT in AlphaFold Pickle file do not match"
 
         paeLenExp = int(len(sequence3)**2)
@@ -408,7 +402,6 @@ VAL 'L-peptide linking' VALINE 'C5 H11 N O2' 117.148""")
             
         ordinal_id = 1
         model_id = 1
-       # label_asym_id = chain_id
         glddtsum = 0
 
         with self.loop(
@@ -490,7 +483,7 @@ class Structure:
         # Assume that all models are single chain
         if self.atoms:
             self.chain_ids = list(set(self.atoms[:][21].strip()))
-            print(self.chain_ids)
+            #print(self.chain_ids)
 
     def get_sequence3(self):
         """Get PDB sequence as a sequence of 3-letter residue names"""
@@ -523,25 +516,24 @@ class Structure:
     def write_mmcif(self, fh, pkl):
         """Write current structure out to a mmCIF file handle"""
         # mmCIF models must always have a chain ID
-        #chain_ids = self.chain_ids or 'A'
         sequence3 = list(self.get_sequence3())
         chain_name_list= list(self.get_chains())
         chain_ids = sorted(list(set(chain_name_list)))
         sequence3_chain=list()
         for chain_id in chain_ids:
             sequence3_chain.append(list(self.get_sequence3_chain(chain_id)))
-        print(chain_name_list)
+
         pkl = AFPickle(pkl)
 
         c = CifWriter(fh, pkl)
         c.write_header("", self.title)
-#        c.write_exptl("hoge", self.expdta)
         c.write_audit_conform()
         c.write_audit_author()
         c.write_citation()
         c.write_software()
         c.write_chem_comp()
-        c.write_entity_details(sequence3_chain, chain_name_list,chain_ids, ["hoge","piyo"])
+        # pad description by chain_ids
+        c.write_entity_details(sequence3_chain, chain_name_list,chain_ids,chain_ids)
         tgtbeg = 1
         tgtend = len(sequence3)
         c.write_target_details(chain_ids, sequence3, self.seqdb, tgtbeg, tgtend)
