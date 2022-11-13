@@ -220,7 +220,7 @@ VAL 'L-peptide linking' VALINE 'C5 H11 N O2' 117.148""")
             for chain_id in chain_ids:
                 target_primary = "".join(three_to_one[x] for x in sequence3_chain[i])
                 lp.write("%d polypeptide(L) no %s %s"
-                         % (self.target.entity_id, target_primary, target_primary))
+                         % (i+1, target_primary, target_primary))
                 i=i+1
 
         with self.loop(
